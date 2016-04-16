@@ -2,22 +2,23 @@ package main
 
 import (
 	"fmt"
-	"github.com/nsqio/go-nsq"
 	"log"
+
+	"github.com/nsqio/go-nsq"
 )
 
 func main() {
 
 	cfg := nsq.NewConfig()
 
-	consumer, err := nsq.NewConsumer("foo", "ch1", cfg)
+	consumer, err := nsq.NewConsumer("foo2", "ch1", cfg)
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	consumer.AddHandler(nsq.HandlerFunc(func(m *nsq.Message) error {
 		// handle the message
-		fmt.Println("Got message:", string(m.Body))
+		fmt.Printf("Got message:%q", m.Body)
 		return nil
 	}))
 
