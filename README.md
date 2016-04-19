@@ -7,8 +7,10 @@ Try to find out if email addresses are valid, in a distributed (more than 1 ip) 
 GO + NSQ
 
 TODO:
+ - Do SMTP lookups in parallell - go ..
+ - Fix the topic creation delay
+ - Submit now, get resultds later REST API
  - Throttling of SMTP connections: per machine and per domain per machine
- - Json messages (or?)
  - DNS MX caching
  - DNS mailserver lookup caching?
  - ASCII nsq overview
@@ -16,28 +18,28 @@ TODO:
 
 ## Architecture overview
 
-         |                                               +----------+
-         |  (REST + JSON)                                |          |
-         |                               +---------------+  Worker  |        +-----------------------+
-         |                               |               |          +--------+                       |
-    +-----------------+                  |               +----------+        | DNS lookup service    |
-    |                 |                  |                                   |  (Not implemented)    |
-    | API & "manager" +------------------+                                   |                       |
-    |                 |                  |                                   +--------+--------------+
-    +-----------------+                  |               +----------+                 |
-                                         |               |          |                 |
-                                         +---------------+ Worker   +-----------------+
-                             (JSON over NSQ)             |          |
-                                                         +----------+
+         |                                                 +----------+
+         |  (REST + JSON)                                  |          |
+         |                                 +---------------+  Worker  |        +-----------------------+
+         |                                 |               |          +--------+                       |
+    +-----------------+                    |               +----------+        | DNS lookup service    |
+    |                 |                    |                                   |  (Not implemented)    |
+    | API & "manager" +--------------------+                                   |                       |
+    |                 |  (JSON over NSQ)   |                                   +--------+--------------+
+    +-----------------+                    |               +----------+                 |
+                                           |               |          |                 |
+                                           +---------------+ Worker   +-----------------+
+                                                           |          |
+                                                           +----------+
 
 
-                                                         +----------+
-                                                         |          |
-                                                         | Worker   |
-                                                         |          |
-                                                         +----------+
-                                                         +----------+
-                                                         |          |
-                                                         | Worker   |
-                                                         |          |
-                                                         +----------+
+                                                           +----------+
+                                                           |          |
+                                                           | Worker   |
+                                                           |          |
+                                                           +----------+
+                                                           +----------+
+                                                           |          |
+                                                           | Worker   |
+                                                           |          |
+                                                           +----------+
