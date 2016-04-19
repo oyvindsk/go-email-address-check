@@ -1,7 +1,7 @@
 package emailVerify
 
 // https://www.webdigi.co.uk/blog/2009/how-to-check-if-an-email-address-exists-without-sending-an-email/
-// TODO: Library?
+// TODO:
 // Cache DNS lookup and mail sever results
 // Throttle per server? Use all MX servers?
 // Better error handling? Custom error interface? http://blog.golang.org/error-handling-and-go
