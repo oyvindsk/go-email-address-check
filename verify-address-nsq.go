@@ -9,107 +9,97 @@ import (
 	"github.com/oyvindsk/go-email-address-check/emailVerify"
 )
 
-const (
-	reqTopic   = "verify-requests"
-	resTopic   = "verify-results"
-	reqChannel = "workers"
-
-	nsqdAddr      = "127.0.0.1:4150"
-	nsqLookupAddr = "127.0.0.1:4160"
-)
-
-// VerfifyReq is the type used for when a verfification request goes through NSQ
-type VerfifyReq struct {
-	Email string
-}
-
-// VerfifyRes is the type used for when a verfification response goes through NSQ
-type VerfifyRes struct {
-	Email     string
-	AddressOK bool
-	SMTPMsg   string
-	Error     error
-}
+// A global producer, so it's easy to access from all function.
+// FIXME Should not be this global, make a type for the handle and put it there?
+var producer *nsq.Producer
 
 func main() {
 
 	// Initialize the nsq config
 	cfg := nsq.NewConfig()
+	cfg.Set("MaxInFlight", nsqMaxInFlight)
 
 	// Create a consumer to pick up new verify requests
-	consumer, err := nsq.NewConsumer(reqTopic, reqChannel, cfg)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	// Create a Producer to send the responses
-	producer, err := nsq.NewProducer(nsqdAddr, cfg)
+	consumer, err := nsq.NewConsumer(reqTopic, workerChannel, cfg)
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	// handle a Lookup Request message
-	consumer.AddHandler(nsq.HandlerFunc(func(m *nsq.Message) error {
-		log.Printf("Got message: %q\n", m.Body)
+	consumer.AddHandler(nsq.HandlerFunc(handleVerifyRequest))
 
-		// do some basic sanity checking
-		//if len(m.Body) == 0 {
-		//	log.Printf("verify-address-nsq: Saw invalid req: %q\n", m.Body)
-		//	return fmt.Errorf("verify-address-nsq: Saw invalid req: %q", m.Body)
-		//}
-
-		// decode the json message
-		var req VerfifyReq
-		err = json.Unmarshal(m.Body, &req)
-		if err != nil {
-			log.Printf("verify-address-nsq: Saw invalid json: %q, err: %q\n", m.Body, err)
-			return fmt.Errorf("verify-address-nsq: Saw invalid json: %q, err: %q\n", m.Body, err)
-		}
-
-		// check the address
-		addrOK, smtpMsg, err := emailVerify.VerifyAddress(req.Email) // FIXME ? Use []byte for lib as well
-
-		if err != nil {
-			log.Printf("verify-address-nsq: Looking up adr: %+v failed: %q\n", req, err)
-			return fmt.Errorf("verify-address-nsq: Looking up adr: %+v failed: %q\n", req, err)
-
-		}
-
-		// Prepare the response
-		res := VerfifyRes{Email: req.Email, AddressOK: addrOK, SMTPMsg: smtpMsg, Error: err}
-		resJSON, err := json.Marshal(res)
-		if err != nil {
-			log.Printf("verify-address-nsq: Encoing result as JSON failed: %+v, err: %q\n", req, err)
-			return fmt.Errorf("verify-address-nsq: Encoing result as JSON failed: %+v, err: %q\n", req, err)
-		}
-
-		// Send the response
-		err = producer.Publish(resTopic, resJSON)
-		if err != nil {
-			log.Printf("verify-address-nsq: Publishing result to NSQ failed: %+v, err: %q\n", resJSON, err)
-			return fmt.Errorf("verify-address-nsq: Publishing result to NSQ failed: %+v, err: %q\n", resJSON, err)
-		}
-
-		if addrOK {
-			log.Printf("OK, Address %+v seems valid (smtp msg: %q)", req, smtpMsg)
-		} else {
-			log.Printf("Invalid, Address %+v seems invalid (smtp msg: %q)", req, smtpMsg)
-		}
-
-		return nil
-
-	}))
-
-	err = consumer.ConnectToNSQLookupds([]string{"127.0.0.1:4161"})
+	// Create a Producer to send the responses
+	producer, err = nsq.NewProducer(nsqdAddr, cfg)
 	if err != nil {
 		log.Fatal(err)
 	}
 
+	err = consumer.ConnectToNSQLookupd(nsqLookupAddr)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// Loop indefinately and get the verify requests
 	for {
 		select {
 		case <-consumer.StopChan:
 			return
 		}
 	}
+
+}
+
+// handleVerifyRequest runs once for each verify request seen on the NSQ topic
+// one go routine per request (message) ??
+func handleVerifyRequest(m *nsq.Message) error {
+	log.Printf("Got message: %q\n", m.Body)
+
+	// The result to publish to NSQ
+	var res VerfifyRes
+
+	// decode the json message
+	var req VerfifyReq
+	err := json.Unmarshal(m.Body, &req)
+	if err != nil {
+		log.Printf("verify-address-nsq: Saw invalid json: %q, err: %q\n", m.Body, err)
+		res.Error = fmt.Errorf("verify-address-nsq: Saw invalid json: %q, err: %q\n", m.Body, err)
+	}
+
+	if res.Error == nil {
+
+		res.Email = req.Email
+
+		// check the address
+		addrOK, smtpMsg, err := emailVerify.VerifyAddress(req.Email) // FIXME ? Use []byte for lib as well
+		if err != nil {
+			log.Printf("verify-address-nsq: Looking up adr: %+v failed: %q\n", req, err)
+			res.Error = fmt.Errorf("verify-address-nsq: Looking up adr: %+v failed: %q\n", req, err)
+		} else {
+			res.AddressOK = addrOK
+			res.SMTPMsg = smtpMsg
+		}
+	}
+
+	// Prepare the response
+	resJSON, err := json.Marshal(res)
+	if err != nil {
+		log.Printf("verify-address-nsq: Encoing result as JSON failed: %+v, err: %q\n", req, err)
+		return fmt.Errorf("verify-address-nsq: Encoing result as JSON failed: %+v, err: %q\n", req, err)
+	}
+
+	// Send the response
+	err = producer.Publish(req.ResultTopic, resJSON)
+	if err != nil {
+		log.Printf("verify-address-nsq: Publishing result to NSQ failed: %+v, err: %q\n", resJSON, err)
+		return fmt.Errorf("verify-address-nsq: Publishing result to NSQ failed: %+v, err: %q\n", resJSON, err)
+	}
+
+	if res.AddressOK {
+		log.Printf("OK, Address %+v seems valid (smtp msg: %q)", req, res.SMTPMsg)
+	} else {
+		log.Printf("Invalid, Address %+v seems invalid (smtp msg: %q)", req, res.SMTPMsg)
+	}
+
+	return nil
 
 }
