@@ -7,9 +7,8 @@ Try to find out if email addresses are valid, in a distributed (more than 1 ip) 
 GO + NSQ
 
 TODO:
- - Do SMTP lookups in parallell - go ..
  - Fix the topic creation delay
- - Submit now, get resultds later REST API
+ - Submit now, get results later REST API
  - Throttling of SMTP connections: per machine and per domain per machine
  - DNS MX caching
  - DNS mailserver lookup caching?
@@ -67,6 +66,31 @@ There are several not-so-good ways to do this:
 - Send all responses to 1 known topic
     - More work then to code the manager, since it has to send the messages to the right go routines
     - Slower? Does it matter??
-    - Could also let every go routine get a copy and filter out those intendet for it
-    - Easier? A lot of message duplication
-    - Or maybe ask each go routine in order: "is this msg headed for you?"
+    - Could also let every go routine get a copy and filter out those intended for it
+        - Easier? A lot of message duplication
+        - Or maybe ask each go routine in order: "is this msg headed for you?"
+
+
+                                                              +---+
+                                                              |   |
+                                                              | N |
+                                                              | S |
+    +--------------------------------------------+            | Q |
+    |                                            |            |   |            +-----------+
+    |                                            | ------------------------->  |           |
+    |                                            |            |   |            |   Worker  |
+    |    API ENDPOINT & MANAGER                  | <------------------------+  |           |
+    |                                            |            |   |            +-----------+
+    |                                            |            |   |
+    |    Takes API requests, aka jobs            |            |   |            +-----------+
+    |    and sends Email Verification Requests   | +------------------------>  |           |
+    |    to the Workers through NSQ              |            |   |            |   Worker  |
+    |                                            | <------------------------+  |           |
+    |                                            |            |   |            +-----------+
+    +--------------------------------------------+            |   |
+                                                              |   |
+                                                              |   |
+                                                              |   |
+                                                              |   |
+                                                              |   |
+                                                          +---+

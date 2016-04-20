@@ -6,6 +6,7 @@ import (
 	"log"
 	"math/rand"
 	"net/http"
+	"sync"
 	"time"
 
 	"github.com/nsqio/go-nsq"
@@ -23,7 +24,6 @@ func main() {
 
 	// Initialize the nsq config
 	cfg := nsq.NewConfig()
-	cfg.Set("MaxInFlight", nsqMaxInFlight)
 
 	// Create a Producer to send request to the workers
 	producer, err := nsq.NewProducer(nsqdAddr, cfg)
@@ -60,9 +60,15 @@ func main() {
 			log.Fatal(err)
 		}
 
+		consumer.ChangeMaxInFlight(nsqMaxInFlight) // cfg.Set() did not work for some reason
+
+		// Make sure we gather all responses.. or timeout
+		wgResults := sync.WaitGroup{}
+
 		// Handle the results
 		consumer.AddHandler(nsq.HandlerFunc(func(m *nsq.Message) error {
 			log.Printf("Got result: %q\n", m.Body)
+			wgResults.Done()
 			return nil
 		}))
 
@@ -82,21 +88,35 @@ func main() {
 			}
 
 			// Publish to NSQ
+			// MultiPublish instead?
 			log.Printf("Publishing %q\t", req)
 			producer.Publish(reqTopic, reqJSON)
 			log.Println("done!")
+
+			wgResults.Add(1)
 		}
 
+		done := make(chan bool)
+		go func() {
+			defer close(done) // Use close as a signal
+			wgResults.Wait()
+		}()
+
 		// Loop indefinately and get the verify requests
-		log.Println("LOOPING")
-	FOO:
-		for {
-			select {
-			case <-consumer.StopChan:
-				//return
-				break FOO
-			}
+		//log.Println("LOOPING")
+		select {
+		case <-consumer.StopChan:
+			//return
+			log.Println("Consumer Stopping")
+		case <-done:
+			log.Println("Job Done!")
+			consumer.Stop()
+		case <-time.After(time.Minute * 3):
+			log.Println("Jobe Timeout!")
+			consumer.Stop()
 		}
+
+		//<-consumer.StopChan
 
 		w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 		if err := json.NewEncoder(w).Encode(struct{ Foo string }{"BAR"}); err != nil {

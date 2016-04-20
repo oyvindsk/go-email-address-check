@@ -1,10 +1,10 @@
 package main
 
 const (
-	reqTopic       = "verify-requests"
-	resTopicBase   = "verify-result-%06d"
-	workerChannel  = "workers"
-	managerChannel = "manager"
+	reqTopic       = "verify_requests"
+	resTopicBase   = "verify_result-%06d"
+	workerChannel  = "email_adress_verification"
+	managerChannel = "results_gathering"
 
 	nsqdAddr       = "127.0.0.1:4150"
 	nsqLookupAddr  = "127.0.0.1:4161" // fixme: could me more than 1, for HA
