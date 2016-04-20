@@ -71,6 +71,9 @@ There are several not-so-good ways to do this:
         - Or maybe ask each go routine in order: "is this msg headed for you?"
 
 
+
+### NSQ Overview
+
                                                               +---+
                                                               |   |
                                                               | N |
@@ -93,4 +96,4 @@ There are several not-so-good ways to do this:
                                                               |   |
                                                               |   |
                                                               |   |
-                                                          +---+
+                                                              +---+
