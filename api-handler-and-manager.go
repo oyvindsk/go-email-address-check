@@ -17,7 +17,7 @@ type apiRequest struct {
 }
 
 type apiResult struct {
-	Results []VerfifyRes
+	Results []VerifyRes
 }
 
 func main() {
@@ -34,6 +34,7 @@ func main() {
 	http.HandleFunc("/address/blocking", func(w http.ResponseWriter, r *http.Request) {
 		log.Printf("Got %q request to %q\n", r.Method, r.URL.Path)
 
+		// Decode the JSON request
 		var apiReq apiRequest
 		decoder := json.NewDecoder(r.Body)
 		if err := decoder.Decode(&apiReq); err != nil {
@@ -63,11 +64,20 @@ func main() {
 		consumer.ChangeMaxInFlight(nsqMaxInFlight) // cfg.Set() did not work for some reason
 
 		// Make sure we gather all responses.. or timeout
+		// Nice example: http://stackoverflow.com/questions/32840687/timeout-for-waitgroup-wait
 		wgResults := sync.WaitGroup{}
+		var apiRes apiResult
 
 		// Handle the results
 		consumer.AddHandler(nsq.HandlerFunc(func(m *nsq.Message) error {
+			var res VerifyRes
+			err := json.Unmarshal(m.Body, &res); if err != nil {
+				// log.Printf("Decoding verify result as json failed:%v\n", err)
+				return fmt.Errorf("Decoding verify result as json failed: %v\n", err)
+			}
+
 			log.Printf("Got result: %q\n", m.Body)
+			apiRes.Results = append(apiRes.Results, res)
 			wgResults.Done()
 			return nil
 		}))
@@ -80,7 +90,7 @@ func main() {
 		for _, a := range apiReq.Addresses {
 
 			// Make a request with the email and encode it as JSON
-			req := VerfifyReq{Email: a, ResultTopic: resTopic}
+			req := VerifyReq{Email: a, ResultTopic: resTopic}
 			reqJSON, err := json.Marshal(req)
 			if err != nil {
 				log.Printf("api-handler-and-manger: Encoing result as JSON failed: %+v, err: %q\n", req, err)
@@ -102,8 +112,6 @@ func main() {
 			wgResults.Wait()
 		}()
 
-		// Loop indefinately and get the verify requests
-		//log.Println("LOOPING")
 		select {
 		case <-consumer.StopChan:
 			//return
@@ -116,10 +124,8 @@ func main() {
 			consumer.Stop()
 		}
 
-		//<-consumer.StopChan
-
 		w.Header().Set("Content-Type", "application/json; charset=UTF-8")
-		if err := json.NewEncoder(w).Encode(struct{ Foo string }{"BAR"}); err != nil {
+		if err := json.NewEncoder(w).Encode(apiRes); err != nil {
 			log.Println("Encoding JSON reply failed:", err)
 			return
 		}

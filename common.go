@@ -11,16 +11,16 @@ const (
 	nsqMaxInFlight = 100              // What exactly does this do? =)
 )
 
-// VerfifyReq is the type used for when a verfification request goes through NSQ
-type VerfifyReq struct {
+// VerifyReq is the type used for when a verfification request goes through NSQ
+type VerifyReq struct {
 	Email       string `json:"email"`
 	ResultTopic string `json:"result-topic"` // The NSQ topic we should publish the result to
 }
 
-// VerfifyRes is the type used for when a verfification results goes through NSQ
-type VerfifyRes struct {
+// VerifyRes is the type used for when a verfification results goes through NSQ
+type VerifyRes struct {
 	Email     string `json:"email"`
 	AddressOK bool   `json:"address-ok"`
 	SMTPMsg   string `json:"smtp-msg"`
-	Error     error  `json:"error"`
+	Error     string  `json:"error"` // Can it not be of type error ??
 }
