@@ -1,0 +1,48 @@
+
+# nsqlookup
+# nsq admin
+# worker
+# nsqd
+# api server
+# nsqd
+
+# Manager
+## Nsqd
+## NsqLookupd
+## NsqAdmin
+## api-server
+
+# Worker
+## verify-worker
+
+nsqd:
+  image: nsqio/nsq
+  command: /nsqd
+  expose:
+    - 4150
+    - 4151
+
+nsqadmin:
+  image: nsqio/nsq
+  command: "/nsqadmin --nsqd-http-address nsqd:4150"
+  ports:
+    - "4171:4171"
+  links:
+   - nsqd
+
+# Build image with something like:
+# docker rmi oyvindsk/go-email-address-check ; docker build -t oyvindsk/go-email-address-check .
+
+verifyworker:
+  image: oyvindsk/go-email-address-check
+  command: "verify-worker nsqd"
+  links:
+    - nsqd
+
+apiserver:
+  image: oyvindsk/go-email-address-check
+  command: "api-server nsqd"
+  links:
+    - nsqd
+  ports:
+    - "8080:8080"
