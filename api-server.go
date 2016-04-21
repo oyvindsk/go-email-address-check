@@ -10,6 +10,8 @@ import (
 	"time"
 
 	"github.com/nsqio/go-nsq"
+	"os"
+	"path/filepath"
 )
 
 // Incoming REST API requests
@@ -36,15 +38,24 @@ type apiResult struct {
 }
 
 var producer *nsq.Producer // FIXME ??
+var nsqLookupdHost string
 
 func main() {
+
+	// Check arguments
+	if len(os.Args) != 3 {
+		fmt.Println("Usage:\n\t", filepath.Base(os.Args[0]), " nsqd host  nsqlookupd host\n(Only 1 lookupd supported atm, fixme)")
+		os.Exit(0)
+	}
+	nsqdHost := os.Args[1]
+	nsqLookupdHost = os.Args[2]
 
 	// Initialize the nsq config
 	cfg := nsq.NewConfig()
 
 	// Create a Producer to send request to the workers
 	var err error
-	producer, err = nsq.NewProducer(nsqdAddr, cfg)
+	producer, err = nsq.NewProducer(nsqdHost+":"+nsqdPort, cfg)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -163,7 +174,7 @@ func runJob(apiReq apiRequest) ([]VerifyRes, error) {
 		return nil
 	}))
 
-	err = consumer.ConnectToNSQLookupd(nsqLookupAddr)
+	err = consumer.ConnectToNSQLookupd(nsqLookupdHost + ":" + nsqLookupdPort)
 	if err != nil {
 		log.Fatal(err)
 	}

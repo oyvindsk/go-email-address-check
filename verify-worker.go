@@ -7,16 +7,21 @@ import (
 
 	"github.com/nsqio/go-nsq"
 	"github.com/oyvindsk/go-email-address-check/verify"
+	"os"
+	"path/filepath"
 	"time"
 )
 
 const (
 	maxConcurrentChecks = 50
 )
+
 // A global producer, so it's easy to access from all function.
 // FIXME Should not be this global, make a type for the handle and put it there?
 // Is it OK that many go routines publishes to the same producer?
 var producer *nsq.Producer
+
+var nsqLookupdHost string
 
 type Footype struct {
 	foo bool
@@ -32,6 +37,14 @@ func (th *Footype) HandleMessage(m *nsq.Message) error {
 }
 
 func main() {
+
+	// Check arguments
+	if len(os.Args) != 3 {
+		fmt.Println("Usage:\n\t", filepath.Base(os.Args[0]), " nsqd host  nsqlookupd host\n(Only 1 lookupd supported atm, fixme)")
+		os.Exit(0)
+	}
+	nsqdHost := os.Args[1]
+	nsqLookupdHost = os.Args[2]
 
 	// Initialize the nsq config
 	cfg := nsq.NewConfig()
@@ -50,12 +63,12 @@ func main() {
 	consumer.AddConcurrentHandlers(nsq.HandlerFunc(handleVerifyRequest), 10)
 
 	// Create a Producer to send the responses
-	producer, err = nsq.NewProducer(nsqdAddr, cfg)
+	producer, err = nsq.NewProducer(nsqdHost+":"+nsqdPort, cfg)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	err = consumer.ConnectToNSQLookupd(nsqLookupAddr)
+	err = consumer.ConnectToNSQLookupd(nsqLookupdHost + ":" + nsqLookupdPort)
 	if err != nil {
 		log.Fatal(err)
 	}
