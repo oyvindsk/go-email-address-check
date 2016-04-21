@@ -1,4 +1,4 @@
-nsq-bin/
+_nsq-bin/
 _nsq-files
 *diskqueue*.dat
 nsqd*.dat
