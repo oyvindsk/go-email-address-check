@@ -7,7 +7,7 @@ const (
 	managerChannel = "results_gathering"
 
 	nsqdPort       = "4150"
-	nsqLookupdPort = "4161"
+	// nsqLookupdPort = "4161" - Not used ATM, just 1 nsqd
 	nsqMaxInFlight = 100 // What exactly does this do? =)
 )
 

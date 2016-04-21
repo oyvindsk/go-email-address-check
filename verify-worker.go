@@ -21,7 +21,6 @@ const (
 // Is it OK that many go routines publishes to the same producer?
 var producer *nsq.Producer
 
-var nsqLookupdHost string
 
 type Footype struct {
 	foo bool
@@ -39,12 +38,11 @@ func (th *Footype) HandleMessage(m *nsq.Message) error {
 func main() {
 
 	// Check arguments
-	if len(os.Args) != 3 {
-		fmt.Println("Usage:\n\t", filepath.Base(os.Args[0]), " nsqd host  nsqlookupd host\n(Only 1 lookupd supported atm, fixme)")
+	if len(os.Args) != 2 {
+		fmt.Println("Usage:\n\t", filepath.Base(os.Args[0]), " nsqd host\n(Just 1 nsqd, so no HA atm, fixme)")
 		os.Exit(0)
 	}
 	nsqdHost := os.Args[1]
-	nsqLookupdHost = os.Args[2]
 
 	// Initialize the nsq config
 	cfg := nsq.NewConfig()
@@ -59,7 +57,7 @@ func main() {
 
 	//consumer.SetLogger(log.New(os.Stdout, "!! ", log.Lshortfile), nsq.LogLevelDebug)
 
-	// handle a Lookup Request message
+	// handle a Verify Request message
 	consumer.AddConcurrentHandlers(nsq.HandlerFunc(handleVerifyRequest), 10)
 
 	// Create a Producer to send the responses
@@ -68,7 +66,8 @@ func main() {
 		log.Fatal(err)
 	}
 
-	err = consumer.ConnectToNSQLookupd(nsqLookupdHost + ":" + nsqLookupdPort)
+	//err = consumer.ConnectToNSQLookupd(nsqLookupdHost + ":" + nsqLookupdPort)
+	err = consumer.ConnectToNSQD(nsqdHost + ":" + nsqdPort)
 	if err != nil {
 		log.Fatal(err)
 	}

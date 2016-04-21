@@ -7,16 +7,36 @@ Try to find out if email addresses are valid, in a distributed (more than 1 ip) 
 GO + NSQ
 
 TODO:
- - Fix the topic creation delay
- - Check a bs address
- - Return the attachment size from EHLO? http://stackoverflow.com/questions/10006226/how-to-retrieve-fixed-upper-limit-on-message-size-smtp-server
- - Add a checkedAt timestamp
- - Submit now, get results later REST API
- - Throttling of SMTP connections: per machine and per domain per machine
+ - Worker: Check a bs address
+ - Worker: Return the attachment size from EHLO? http://stackoverflow.com/questions/10006226/how-to-retrieve-fixed-upper-limit-on-message-size-smtp-server
+ - Worker: Add a checkedAt timestamp
+ - API: Submit now, get results later REST API
+ - Worker: Throttling of SMTP connections: per machine and per domain per machine
  - DNS MX caching
  - DNS mailserver lookup caching?
  - ASCII nsq overview
+ - Use nsqlookupd and more nsqd's (And then we also need to fix the topic creation delay, see further down)
 
+## Running
+### NSQ
+We only use 1 nsqd pluss the nsq admin at the moment. This should probably change in the future to make it more
+resilient and distributed. The standard NSQ setup is to run 1 nsqd with every producer
+(api-server and verify-worker for this project), and then a few nsqlookupd's to facilitate discovery.
+However since we run on docker it's a little difficult to force the nsqd's to run on the right machine, so we just run one instead and point everything to it.
+
+    nsqd &
+    nsqadmin &
+
+
+### API Server
+This is the REST API endpoint and the manager that takes care of splitting a "job" (rest api call) into several small
+requests for the workers to process
+
+    go run api-server.go common.go ADDRESS-OF-NSQD
+
+### Worker
+
+    go run verify-client.go common.go ADDRESS-OF-NSQD
 
 ## Architecture overview
 
@@ -50,10 +70,12 @@ TODO:
 ## NSQ
 The api-and-manager takes rest calls with >0 email addresses to verify. This is a "job".
 The api-and-manager then takes each
- - Email Verify Request: One (api-and-manager) to many (workers)
- - Email Verify Result: Many (workers) to one (api-and-manager)
+ - Email Verify Request: One (api-server) to many (verify-workers)
+ - Email Verify Result: Many (verify-workers) to one (api-server)
 
 ### Response "problem"
+(Note: Right now we just use 1 nsqd, so this is not a problem)
+
 The responses (results of the worker jobs) also need to get back to the manager.
 NSQ topics are one-ways "streams" of messages so we are responsible for making sure the results get back to the manager.
 

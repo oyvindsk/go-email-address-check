@@ -38,17 +38,16 @@ type apiResult struct {
 }
 
 var producer *nsq.Producer // FIXME ??
-var nsqLookupdHost string
+var nsqdHost string
 
 func main() {
 
 	// Check arguments
-	if len(os.Args) != 3 {
-		fmt.Println("Usage:\n\t", filepath.Base(os.Args[0]), " nsqd host  nsqlookupd host\n(Only 1 lookupd supported atm, fixme)")
+	if len(os.Args) != 2 {
+		fmt.Println("Usage:\n\t", filepath.Base(os.Args[0]), " nsqd host\n(Just 1 nsqd, so no HA atm, fixme)")
 		os.Exit(0)
 	}
-	nsqdHost := os.Args[1]
-	nsqLookupdHost = os.Args[2]
+	nsqdHost = os.Args[1]
 
 	// Initialize the nsq config
 	cfg := nsq.NewConfig()
@@ -174,7 +173,8 @@ func runJob(apiReq apiRequest) ([]VerifyRes, error) {
 		return nil
 	}))
 
-	err = consumer.ConnectToNSQLookupd(nsqLookupdHost + ":" + nsqLookupdPort)
+	// err = consumer.ConnectToNSQLookupd(nsqLookupdHost + ":" + nsqLookupdPort)
+	err = consumer.ConnectToNSQD(nsqdHost + ":" + nsqdPort)
 	if err != nil {
 		log.Fatal(err)
 	}
