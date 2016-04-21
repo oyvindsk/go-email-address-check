@@ -8,6 +8,9 @@ GO + NSQ
 
 TODO:
  - Fix the topic creation delay
+ - Check a bs address
+ - Return the attachment size from EHLO? http://stackoverflow.com/questions/10006226/how-to-retrieve-fixed-upper-limit-on-message-size-smtp-server
+ - Add a checkedAt timestamp
  - Submit now, get results later REST API
  - Throttling of SMTP connections: per machine and per domain per machine
  - DNS MX caching
