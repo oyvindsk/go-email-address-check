@@ -11,7 +11,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/oyvindsk/go-email-address-check/emailVerify"
+	"github.com/oyvindsk/go-email-address-check/verify"
 )
 
 func main() {
@@ -27,7 +27,7 @@ func main() {
 		os.Exit(0)
 	}
 
-	addrOK, smtpMsg, err := emailVerify.VerifyAddress(emailAddress)
+	addrOK, smtpMsg, err := verify.VerifyAddress(emailAddress)
 
 	if err != nil {
 		log.Fatal(err)

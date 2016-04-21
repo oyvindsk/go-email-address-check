@@ -1,4 +1,4 @@
-package emailVerify
+package verify
 
 // https://www.webdigi.co.uk/blog/2009/how-to-check-if-an-email-address-exists-without-sending-an-email/
 // TODO:

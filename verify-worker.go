@@ -6,7 +6,7 @@ import (
 	"log"
 
 	"github.com/nsqio/go-nsq"
-	"github.com/oyvindsk/go-email-address-check/emailVerify"
+	"github.com/oyvindsk/go-email-address-check/verify"
 	"time"
 )
 
@@ -91,7 +91,7 @@ func handleVerifyRequest(m *nsq.Message) error {
 		res.Email = req.Email
 
 		// check the address
-		addrOK, smtpMsg, err := emailVerify.VerifyAddress(req.Email) // FIXME ? Use []byte for lib as well
+		addrOK, smtpMsg, err := verify.VerifyAddress(req.Email) // FIXME ? Use []byte for lib as well
 		if err != nil {
 			log.Printf("verify-address-nsq: Looking up adr: %+v failed: %q\n", req, err)
 			res.Error = fmt.Sprintf("verify-address-nsq: Looking up adr: %+v failed: %q\n", req, err)
