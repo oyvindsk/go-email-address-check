@@ -1,17 +1,20 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"math/rand"
 	"net/http"
 	"sync"
 	"time"
 
-	"github.com/nsqio/go-nsq"
 	"os"
 	"path/filepath"
+
+	"github.com/nsqio/go-nsq"
 )
 
 // Incoming REST API requests
@@ -39,6 +42,7 @@ type apiResult struct {
 
 var producer *nsq.Producer // FIXME ??
 var nsqdHost string
+var httpClient http.Client
 
 func main() {
 
@@ -51,6 +55,9 @@ func main() {
 
 	// Initialize the nsq config
 	cfg := nsq.NewConfig()
+
+	// Make a http client with a timeout. Can be used everywere.
+	httpClient = http.Client{Timeout: time.Duration(time.Second * 60)}
 
 	// Create a Producer to send request to the workers
 	var err error
@@ -112,8 +119,29 @@ func main() {
 				return
 			}
 
+			// Encode it as JSON
+			resJSON, err := json.Marshal(result)
+			if err != nil {
+				log.Printf("api-server: Encoing job result as json for post-back failed: %+v, err: %q\n", result, err)
+				return
+			}
+
 			// Post the results back to the callback url
-			log.Printf("POSTING:\n%+v\n\nTo:\n%q\n", result, apiReq.Callback)
+			//log.Printf("POSTING:\n%+v\n\nTo:\n%q\n", result, apiReq.Callback)
+			log.Printf("POSTING to: %q\n", apiReq.Callback)
+			postRes, err := httpClient.Post(apiReq.Callback, "application/json", bytes.NewReader(resJSON))
+			if err != nil {
+				log.Printf("api-server: Posting to the callback failed: %v\n", err)
+				return
+			}
+
+			defer postRes.Body.Close()
+			postResBody, err := ioutil.ReadAll(postRes.Body)
+			if err != nil {
+				log.Printf("api-server: Reading the reply from Posting to the callback failed: %v\n", err)
+				return
+			}
+			fmt.Println("Ok, posting to callback succeeded. Server said:%q", postResBody)
 		}()
 
 		w.Header().Set("Content-Type", "application/json; charset=UTF-8")

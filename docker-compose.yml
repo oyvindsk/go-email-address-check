@@ -1,19 +1,6 @@
 
-# nsqlookup
-# nsq admin
-# worker
-# nsqd
-# api server
-# nsqd
-
-# Manager
-## Nsqd
-## NsqLookupd
-## NsqAdmin
-## api-server
-
-# Worker
-## verify-worker
+# https://docs.docker.com/compose/compose-file/ 
+# http://nsq.io/deployment/docker.html
 
 nsqd:
   image: nsqio/nsq
@@ -24,7 +11,7 @@ nsqd:
 
 nsqadmin:
   image: nsqio/nsq
-  command: "/nsqadmin --nsqd-http-address nsqd:4150"
+  command: "/nsqadmin --nsqd-http-address nsqd:4151"
   ports:
     - "4171:4171"
   links:

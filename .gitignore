@@ -3,3 +3,4 @@ _nsq-files
 *diskqueue*.dat
 nsqd*.dat
 .idea/
+*.swp
