@@ -44,7 +44,7 @@ func VerifyAddress(emailAddress string) (bool, string, error) {
 	}
 
 	// Be polite, say HELLO
-	if err = c.Hello("lilleole.odots.org"); err != nil {
+	if err = c.Hello("emailcaptain.com"); err != nil {
 		return false, err.Error(), fmt.Errorf("verifyAddress: smtp Hello failed: %q", err)
 	}
 
@@ -56,7 +56,7 @@ func VerifyAddress(emailAddress string) (bool, string, error) {
 	}
 
 	// Set the sender and recipient first
-	if err := c.Mail("os@odots.org"); err != nil { // FIXME =)
+	if err := c.Mail("emailtest@emailcaptain.com"); err != nil { // FIXME =)
 		return false, err.Error(), fmt.Errorf("verifyAddress: smtp Mail FROM failed: %q", err)
 	}
 	if err := c.Rcpt(emailAddress); err != nil {
