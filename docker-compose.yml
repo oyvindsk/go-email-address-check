@@ -2,20 +2,27 @@
 # https://docs.docker.com/compose/compose-file/ 
 # http://nsq.io/deployment/docker.html
 
+# Nsqd and nsqadmin runs in the same server atm as a workaround to a rancher bug:
+# https://github.com/rancher/rancher/issues/3569
+
 nsqd:
   image: nsqio/nsq
-  command: /nsqd
+  # command: /nsqd
+  command: sh -c '/nsqd &  /nsqadmin --nsqd-http-address localhost:4151'
   expose:
-    - 4150
-    - 4151
-
-nsqadmin:
-  image: nsqio/nsq
-  command: "/nsqadmin --nsqd-http-address nsqd:4151"
+    - "4150" # nsqd
+    - "4151" # nsqd
   ports:
-    - "4171:4171"
-  links:
-   - nsqd
+    - "4171:4171" # nsqadmin
+
+  ## nsqadmin:
+  ##   image: nsqio/nsq
+  ##   command: "/nsqadmin --nsqd-http-address nsqd:4151"
+  ##   ports:
+  ##     - "4171:4171"
+  ##   links:
+  ##    - nsqd
+  ##
 
 # Build image with something like:
 # docker rmi oyvindsk/go-email-address-check ; docker build -t oyvindsk/go-email-address-check .
