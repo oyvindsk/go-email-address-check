@@ -18,5 +18,5 @@ RUN     go build api-server.go      common.go
 RUN     go build verify-worker.go   common.go
 
 # This is hacky, since go install does not work, because I'm too lazy to make common.go a real package
-RUN     mv api-server /go/bin && mv verify-worker /go/bin
+RUN     mv api-server verify-worker /go/bin
 
